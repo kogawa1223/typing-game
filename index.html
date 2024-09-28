@@ -33,6 +33,11 @@
             text-align: center;
             line-height: 1.5;
         }
+        #japanese-translation {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
         #sentence-display span {
             display: inline-block;
             margin: 0 2px;
@@ -77,12 +82,12 @@
             border-radius: 3px;
         }
         #time-gauge {
-            width: 200px; /* ゲージの幅を短くしました */
+            width: 200px;
             height: 20px;
             background-color: #f0f0f0;
             border-radius: 10px;
             overflow: hidden;
-            margin: 10px auto; /* 中央揃えにしました */
+            margin: 10px auto;
         }
         #time-gauge-fill {
             height: 100%;
@@ -95,6 +100,7 @@
     <div id="game-container">
         <h1>Typing Game</h1>
         <div id="sentence-display"></div>
+        <div id="japanese-translation"></div>
         <input type="text" id="input-field" autocomplete="off" disabled>
         <div>
             <select id="difficulty-select">
@@ -113,44 +119,45 @@
 
     <script>
         const easySentences = [
-            "I work in an office.",
-            "The meeting starts at nine.",
-            "Please call me later.",
-            "I need to buy a ticket.",
-            "Can you help me?",
-            "The food tastes good.",
-            "I will send an email.",
-            "The train is late today.",
-            "We have lunch at noon.",
-            "She speaks English well."
+            { en: "I work in an office.", ja: "私はオフィスで働いています。" },
+            { en: "The meeting starts at nine.", ja: "会議は9時に始まります。" },
+            { en: "Please call me later.", ja: "後で電話してください。" },
+            { en: "I need to buy a ticket.", ja: "チケットを買う必要があります。" },
+            { en: "Can you help me?", ja: "手伝ってもらえますか？" },
+            { en: "The food tastes good.", ja: "食べ物の味が良いです。" },
+            { en: "I will send an email.", ja: "メールを送ります。" },
+            { en: "The train is late today.", ja: "今日は電車が遅れています。" },
+            { en: "We have lunch at noon.", ja: "私たちは正午に昼食を取ります。" },
+            { en: "She speaks English well.", ja: "彼女は英語を上手に話します。" }
         ];
         const mediumSentences = [
-            "The report is due next week.",
-            "We should discuss this matter.",
-            "I have an appointment tomorrow.",
-            "Please fill out this form.",
-            "The flight has been delayed.",
-            "We need to improve our sales.",
-            "Can you attend the conference?",
-            "The customer is always right.",
-            "Let's schedule a meeting soon.",
-            "I'm looking for a new job."
+            { en: "The report is due next week.", ja: "レポートの締め切りは来週です。" },
+            { en: "We should discuss this matter.", ja: "この件について話し合うべきです。" },
+            { en: "I have an appointment tomorrow.", ja: "明日約束があります。" },
+            { en: "Please fill out this form.", ja: "この用紙に記入してください。" },
+            { en: "The flight has been delayed.", ja: "フライトが遅延しています。" },
+            { en: "We need to improve our sales.", ja: "売上を改善する必要があります。" },
+            { en: "Can you attend the conference?", ja: "会議に出席できますか？" },
+            { en: "The customer is always right.", ja: "お客様は常に正しいです。" },
+            { en: "Let's schedule a meeting soon.", ja: "近々会議を予定しましょう。" },
+            { en: "I'm looking for a new job.", ja: "新しい仕事を探しています。" }
         ];
         const hardSentences = [
-            "Our company is expanding rapidly.",
-            "The contract needs to be renewed.",
-            "We're facing some budget constraints.",
-            "Customer feedback is very important.",
-            "Please submit your expenses report.",
-            "We need to increase productivity.",
-            "The market is highly competitive.",
-            "I'll forward you the relevant documents.",
-            "We should prioritize this project.",
-            "Let's review the quarterly results."
+            { en: "Our company is expanding rapidly.", ja: "私たちの会社は急速に拡大しています。" },
+            { en: "The contract needs to be renewed.", ja: "契約を更新する必要があります。" },
+            { en: "We're facing some budget constraints.", ja: "予算の制約に直面しています。" },
+            { en: "Customer feedback is very important.", ja: "顧客からのフィードバックは非常に重要です。" },
+            { en: "Please submit your expenses report.", ja: "経費報告書を提出してください。" },
+            { en: "We need to increase productivity.", ja: "生産性を向上させる必要があります。" },
+            { en: "The market is highly competitive.", ja: "市場は非常に競争が激しいです。" },
+            { en: "I'll forward you the relevant documents.", ja: "関連書類を転送します。" },
+            { en: "We should prioritize this project.", ja: "このプロジェクトを優先すべきです。" },
+            { en: "Let's review the quarterly results.", ja: "四半期の結果を見直しましょう。" }
         ];
 
         let sentences = mediumSentences;
         let currentSentence = '';
+        let currentTranslation = '';
         let previousSentence = '';
         let score = 0;
         let timeLeft = 60;
@@ -162,6 +169,7 @@
         let highScore = 0;
 
         const sentenceDisplay = document.getElementById('sentence-display');
+        const japaneseTranslation = document.getElementById('japanese-translation');
         const inputField = document.getElementById('input-field');
         const scoreValue = document.getElementById('score-value');
         const wpmValue = document.getElementById('wpm-value');
@@ -175,14 +183,17 @@
             let newSentence;
             do {
                 newSentence = sentences[Math.floor(Math.random() * sentences.length)];
-            } while (newSentence === previousSentence && sentences.length > 1);
-            previousSentence = newSentence;
+            } while (newSentence.en === previousSentence && sentences.length > 1);
+            previousSentence = newSentence.en;
             return newSentence;
         }
 
         function updateGame() {
-            currentSentence = getRandomSentence();
+            const sentenceObj = getRandomSentence();
+            currentSentence = sentenceObj.en;
+            currentTranslation = sentenceObj.ja;
             displaySentence();
+            japaneseTranslation.textContent = currentTranslation;
             inputField.value = '';
             inputField.focus();
         }
@@ -229,7 +240,6 @@
             const percentageLeft = (timeLeft / gameDuration) * 100;
             timeGaugeFill.style.width = `${percentageLeft}%`;
             
-            // 色のグラデーション計算
             const red = Math.floor(255 * (1 - percentageLeft / 100));
             const green = Math.floor(255 * (percentageLeft / 100));
             timeGaugeFill.style.backgroundColor = `rgb(${red}, ${green}, 0)`;
@@ -271,6 +281,7 @@
             clearInterval(gameInterval);
             inputField.disabled = true;
             sentenceDisplay.textContent = `Game Over! You typed ${score} words at ${wpmValue.textContent} WPM!`;
+            japaneseTranslation.textContent = 'ゲーム終了！';
             startButton.textContent = 'Start';
             startButton.disabled = false;
             difficultySelect.disabled = false;
