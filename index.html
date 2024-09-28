@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Game</title>
+    <style>
+        body {
+            font-family: 'Meiryo', 'メイリオ', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: white;
+        }
+        #game-container {
+            text-align: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+        #sentence-display {
+            font-size: 24px;
+            margin: 20px 0;
+            min-height: 72px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            line-height: 1.5;
+        }
+        #sentence-display span {
+            display: inline-block;
+            margin: 0 2px;
+        }
+        #sentence-display span.space {
+            width: 8px;
+            background-color: #ddd;
+        }
+        #input-field {
+            font-size: 20px;
+            padding: 10px;
+            width: 90%;
+            margin-bottom: 20px;
+            font-family: 'Meiryo', 'メイリオ', sans-serif;
+        }
+        .stat {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        #difficulty-select, #start-button {
+            font-size: 18px;
+            padding: 10px 15px;
+            margin: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Meiryo', 'メイリオ', sans-serif;
+        }
+        .correct {
+            color: #00aa00;
+        }
+        .incorrect {
+            color: #ff0000;
+            text-decoration: underline;
+        }
+        .word {
+            margin: 0 4px;
+            padding: 2px 4px;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+        }
+        #time-gauge {
+            width: 200px; /* ゲージの幅を短くしました */
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px auto; /* 中央揃えにしました */
+        }
+        #time-gauge-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 1s linear, background-color 1s linear;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Typing Game</h1>
+        <div id="sentence-display"></div>
+        <input type="text" id="input-field" autocomplete="off" disabled>
+        <div>
+            <select id="difficulty-select">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <button id="start-button">Start</button>
+        </div>
+        <div id="time-gauge"><div id="time-gauge-fill"></div></div>
+        <div id="timer" class="stat">Time left: 60 seconds</div>
+        <div id="score" class="stat">Words typed: <span id="score-value">0</span></div>
+        <div id="wpm" class="stat">WPM: <span id="wpm-value">0</span></div>
+        <div id="high-score" class="stat">High Score: <span id="high-score-value">0</span> words</div>
+    </div>
+
+    <script>
+        const easySentences = [
+            "I work in an office.",
+            "The meeting starts at nine.",
+            "Please call me later.",
+            "I need to buy a ticket.",
+            "Can you help me?",
+            "The food tastes good.",
+            "I will send an email.",
+            "The train is late today.",
+            "We have lunch at noon.",
+            "She speaks English well."
+        ];
+        const mediumSentences = [
+            "The report is due next week.",
+            "We should discuss this matter.",
+            "I have an appointment tomorrow.",
+            "Please fill out this form.",
+            "The flight has been delayed.",
+            "We need to improve our sales.",
+            "Can you attend the conference?",
+            "The customer is always right.",
+            "Let's schedule a meeting soon.",
+            "I'm looking for a new job."
+        ];
+        const hardSentences = [
+            "Our company is expanding rapidly.",
+            "The contract needs to be renewed.",
+            "We're facing some budget constraints.",
+            "Customer feedback is very important.",
+            "Please submit your expenses report.",
+            "We need to increase productivity.",
+            "The market is highly competitive.",
+            "I'll forward you the relevant documents.",
+            "We should prioritize this project.",
+            "Let's review the quarterly results."
+        ];
+
+        let sentences = mediumSentences;
+        let currentSentence = '';
+        let previousSentence = '';
+        let score = 0;
+        let timeLeft = 60;
+        const gameDuration = 60;
+        let gameInterval;
+        let isGameActive = false;
+        let startTime;
+        let totalCharacters = 0;
+        let highScore = 0;
+
+        const sentenceDisplay = document.getElementById('sentence-display');
+        const inputField = document.getElementById('input-field');
+        const scoreValue = document.getElementById('score-value');
+        const wpmValue = document.getElementById('wpm-value');
+        const highScoreValue = document.getElementById('high-score-value');
+        const timerDisplay = document.getElementById('timer');
+        const timeGaugeFill = document.getElementById('time-gauge-fill');
+        const difficultySelect = document.getElementById('difficulty-select');
+        const startButton = document.getElementById('start-button');
+
+        function getRandomSentence() {
+            let newSentence;
+            do {
+                newSentence = sentences[Math.floor(Math.random() * sentences.length)];
+            } while (newSentence === previousSentence && sentences.length > 1);
+            previousSentence = newSentence;
+            return newSentence;
+        }
+
+        function updateGame() {
+            currentSentence = getRandomSentence();
+            displaySentence();
+            inputField.value = '';
+            inputField.focus();
+        }
+
+        function displaySentence() {
+            sentenceDisplay.innerHTML = currentSentence.split('').map(char => {
+                if (char === ' ') {
+                    return '<span class="space"> </span>';
+                }
+                return `<span>${char}</span>`;
+            }).join('');
+        }
+
+        function updateSentenceDisplay() {
+            const typedValue = inputField.value;
+            const sentenceCharacters = sentenceDisplay.querySelectorAll('span');
+
+            let allCorrect = true;
+            sentenceCharacters.forEach((char, index) => {
+                if (index < typedValue.length) {
+                    if (char.innerText === typedValue[index] || (char.classList.contains('space') && typedValue[index] === ' ')) {
+                        char.className = char.classList.contains('space') ? 'space correct' : 'correct';
+                    } else {
+                        char.className = char.classList.contains('space') ? 'space incorrect' : 'incorrect';
+                        allCorrect = false;
+                    }
+                } else {
+                    char.className = char.classList.contains('space') ? 'space' : '';
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect && typedValue.length === currentSentence.length) {
+                score += currentSentence.split(' ').length;
+                totalCharacters += currentSentence.length;
+                scoreValue.textContent = score;
+                updateGame();
+            }
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerDisplay.textContent = `Time left: ${timeLeft} seconds`;
+            const percentageLeft = (timeLeft / gameDuration) * 100;
+            timeGaugeFill.style.width = `${percentageLeft}%`;
+            
+            // 色のグラデーション計算
+            const red = Math.floor(255 * (1 - percentageLeft / 100));
+            const green = Math.floor(255 * (percentageLeft / 100));
+            timeGaugeFill.style.backgroundColor = `rgb(${red}, ${green}, 0)`;
+
+            updateWPM();
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function updateWPM() {
+            const timeElapsed = (Date.now() - startTime) / 1000 / 60; // in minutes
+            const wpm = Math.round((totalCharacters / 5) / timeElapsed);
+            wpmValue.textContent = wpm;
+        }
+
+        function startGame() {
+            if (isGameActive) return;
+            isGameActive = true;
+            score = 0;
+            timeLeft = gameDuration;
+            totalCharacters = 0;
+            scoreValue.textContent = '0';
+            wpmValue.textContent = '0';
+            inputField.disabled = false;
+            inputField.focus();
+            updateGame();
+            startTime = Date.now();
+            gameInterval = setInterval(updateTimer, 1000);
+            startButton.textContent = 'Game in Progress';
+            startButton.disabled = true;
+            difficultySelect.disabled = true;
+            timeGaugeFill.style.width = '100%';
+            timeGaugeFill.style.backgroundColor = 'rgb(0, 255, 0)';
+        }
+
+        function endGame() {
+            isGameActive = false;
+            clearInterval(gameInterval);
+            inputField.disabled = true;
+            sentenceDisplay.textContent = `Game Over! You typed ${score} words at ${wpmValue.textContent} WPM!`;
+            startButton.textContent = 'Start';
+            startButton.disabled = false;
+            difficultySelect.disabled = false;
+            updateHighScore();
+        }
+
+        function updateHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                highScoreValue.textContent = highScore;
+                localStorage.setItem('highScore', highScore);
+            }
+        }
+
+        function setDifficulty() {
+            const difficulty = difficultySelect.value;
+            switch (difficulty) {
+                case 'easy':
+                    sentences = easySentences;
+                    break;
+                case 'medium':
+                    sentences = mediumSentences;
+                    break;
+                case 'hard':
+                    sentences = hardSentences;
+                    break;
+            }
+        }
+
+        inputField.addEventListener('input', updateSentenceDisplay);
+        startButton.addEventListener('click', startGame);
+        difficultySelect.addEventListener('change', setDifficulty);
+
+        // Load high score from local storage
+        const savedHighScore = localStorage.getItem('highScore');
+        if (savedHighScore) {
+            highScore = parseInt(savedHighScore);
+            highScoreValue.textContent = highScore;
+        }
+
+        setDifficulty();
+    </script>
+</body>
+</html>
